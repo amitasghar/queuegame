@@ -80,9 +80,11 @@ export class NewsSystem {
                 align-items: flex-start;
                 gap: 12px;
                 padding: 15px;
-                background: rgba(42, 42, 42, 0.8);
+                background: rgba(20, 20, 20, 0.95);
+                border: 1px solid rgba(0, 204, 170, 0.3);
                 border-left: 4px solid var(--accent-color);
                 border-radius: 6px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
             ">
                 <div class="news-icon" style="
                     font-size: 1.2em;
@@ -109,20 +111,30 @@ export class NewsSystem {
 
                         ${gameConfig.news.showTimestamp ? `
                             <span class="news-time" style="
-                                color: var(--text-secondary);
+                                color: #aaaaaa;
                                 font-size: 0.8em;
                                 white-space: nowrap;
                                 margin-top: 2px;
+                                font-weight: 300;
                             ">${timeAgo}</span>
                         ` : ''}
                     </div>
 
                     <p class="news-text" style="
-                        color: var(--text-primary);
+                        color: #ffffff;
                         margin: 0;
                         line-height: 1.4;
                         font-size: 0.9em;
+                        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+                        font-weight: 400;
                     ">${newsItem.content}</p>
+
+                    <div class="news-countdown" style="
+                        margin-top: 10px;
+                        font-size: 0.75em;
+                        color: #888888;
+                        font-style: italic;
+                    ">Next update in ${Math.floor(gameConfig.news.rotationIntervalMs / 1000)} seconds</div>
                 </div>
             </div>
         `;
@@ -142,6 +154,7 @@ export class NewsSystem {
             wellness: '🧘',
             politics: '🏛️',
             gaming: '🎮',
+            sports: '⚽',
             general: '📰'
         };
         return icons[category] || icons.general;
@@ -167,7 +180,16 @@ export class NewsSystem {
     }
 
     nextNews() {
-        this.currentNewsIndex = (this.currentNewsIndex + 1) % this.newsItems.length;
+        // Random selection instead of sequential
+        const newIndex = Math.floor(Math.random() * this.newsItems.length);
+
+        // Avoid showing the same news item twice in a row (if we have more than 1 item)
+        if (this.newsItems.length > 1 && newIndex === this.currentNewsIndex) {
+            this.currentNewsIndex = (newIndex + 1) % this.newsItems.length;
+        } else {
+            this.currentNewsIndex = newIndex;
+        }
+
         this.showCurrentNews();
     }
 

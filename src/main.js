@@ -53,6 +53,11 @@ class Game {
                 this.startGame();
             });
         }
+
+        // Contact button on start screen
+        document.getElementById('contact-button')?.addEventListener('click', () => {
+            this.openContactEmail();
+        });
     }
 
     startGame() {
@@ -144,6 +149,11 @@ class Game {
         // Reset button
         document.getElementById('reset-button')?.addEventListener('click', () => {
             this.showResetConfirmation();
+        });
+
+        // Contact button in game
+        document.getElementById('contact-button-game')?.addEventListener('click', () => {
+            this.openContactEmail();
         });
     }
 
@@ -624,6 +634,74 @@ class Game {
         this.queueSimulator.saveState();
 
         console.log(`Advanced to ${newQueueData.name}`);
+    }
+
+    openContactEmail() {
+        const email = 'sagarikagames@protonmail.com';
+        const subject = 'Queue Game - Contact';
+        const body = 'Hello Sagarika Games,\n\nI wanted to reach out about Queue Game.\n\n';
+
+        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+        try {
+            window.open(mailtoLink, '_blank');
+        } catch (error) {
+            // Fallback - copy email to clipboard
+            navigator.clipboard.writeText(email).then(() => {
+                this.showContactInfo(email);
+            }).catch(() => {
+                this.showContactInfo(email);
+            });
+        }
+    }
+
+    showContactInfo(email) {
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--secondary-bg);
+            border: 3px solid var(--accent-color);
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 1000;
+            max-width: 450px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+            text-align: center;
+        `;
+
+        popup.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px;">
+                <img src="./assets/images/sagarika_games_text.png" alt="Sagarika Games" style="height: 30px; width: auto; filter: drop-shadow(0 0 5px rgba(0, 204, 255, 0.4));">
+                <h2 style="color: var(--accent-color); margin: 0; font-size: 1.2em;">Contact Us</h2>
+            </div>
+            <p style="color: var(--text-primary); margin-bottom: 20px; line-height: 1.6;">
+                📧 Email: <strong style="color: var(--accent-color);">${email}</strong><br>
+                <small style="color: var(--text-secondary);">Email address copied to clipboard!</small>
+            </p>
+            <button id="contact-popup-ok" style="
+                padding: 12px 25px;
+                background: var(--accent-color);
+                color: var(--primary-bg);
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-family: inherit;
+                font-weight: bold;
+                font-size: 1.1em;
+                box-shadow: 0 4px 12px rgba(0, 204, 255, 0.4);
+                transition: all 0.3s ease;
+            " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Got it!</button>
+        `;
+
+        document.body.appendChild(popup);
+
+        // Close popup when clicking the button or anywhere on popup
+        popup.addEventListener('click', () => {
+            popup.remove();
+        });
     }
 }
 

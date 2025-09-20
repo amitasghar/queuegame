@@ -9,6 +9,9 @@ export class AdSystem {
         this.rotationInterval = null;
         this.isLoading = false;
         this.currentAdData = null;
+        this.shuffledAds = [];
+        this.shuffleIndex = 0;
+        this.preloadedImages = new Map(); // Cache for preloaded images
 
         // Fallback text ads for when no images are available
         this.textAds = [
@@ -88,19 +91,42 @@ export class AdSystem {
         // Make this instance globally accessible for click handlers
         window.gameAdSystem = this;
 
-        // Try to load image ads first
-        await this.loadImageAds();
+        // Show fallback content immediately while loading
+        this.showLoadingAd();
 
-        // If no image ads found, use text ads
-        if (this.ads.length === 0) {
-            console.log('No image ads found, using text ads');
-            this.ads = this.textAds;
-        }
+        // Load image ads asynchronously without blocking
+        this.loadImageAds().then(() => {
+            // If no image ads found, use text ads
+            if (this.ads.length === 0) {
+                console.log('No image ads found, using text ads');
+                this.ads = this.textAds;
+            }
+
+            // Initialize shuffle for random rotation
+            this.shuffleAds();
+
+            // Show first real ad immediately
+            this.showCurrentAd();
+
+            console.log(`Ad system initialized with ${this.ads.length} ads`);
+        });
 
         this.startRotation();
         this.bindEvents();
+    }
 
-        console.log(`Ad system initialized with ${this.ads.length} ads`);
+    shuffleAds() {
+        // Create a shuffled copy of all ads
+        this.shuffledAds = [...this.ads];
+
+        // Fisher-Yates shuffle algorithm
+        for (let i = this.shuffledAds.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.shuffledAds[i], this.shuffledAds[j]] = [this.shuffledAds[j], this.shuffledAds[i]];
+        }
+
+        this.shuffleIndex = 0;
+        console.log('Ads shuffled for random rotation');
     }
 
     async loadImageAds() {
@@ -126,6 +152,9 @@ export class AdSystem {
                         }
                     }
                     console.log('Loaded ads from manifest:', imageAds.map(ad => ad.filename));
+
+                    // Preload all manifest images in background (don't await)
+                    this.preloadManifestImages(manifest.files);
                 }
             } catch (e) {
                 // No manifest file, fall back to discovery method
@@ -189,12 +218,51 @@ export class AdSystem {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
-                console.log(`✓ Ad image found: ${src}`);
+                // Store preloaded image for instant access later
+                this.preloadedImages.set(src, img);
+                console.log(`✓ Ad image preloaded: ${src}`);
                 resolve(true);
             };
             img.onerror = () => {
                 console.log(`✗ Ad image not found: ${src}`);
                 resolve(false);
+            };
+            img.src = src;
+        });
+    }
+
+    async preloadManifestImages(filenames) {
+        console.log('🔄 Preloading ad images...');
+        const preloadPromises = filenames
+            .filter(filename => this.supportedFormats.some(ext => filename.toLowerCase().endsWith(ext)))
+            .map(filename => {
+                const imagePath = `${this.adFolder}${filename}`;
+                return this.preloadSingleImage(imagePath);
+            });
+
+        try {
+            await Promise.all(preloadPromises);
+            console.log(`✅ Successfully preloaded ${this.preloadedImages.size} ad images`);
+        } catch (error) {
+            console.warn('Some ad images failed to preload:', error);
+        }
+    }
+
+    preloadSingleImage(src) {
+        return new Promise((resolve) => {
+            if (this.preloadedImages.has(src)) {
+                resolve(true); // Already preloaded
+                return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+                this.preloadedImages.set(src, img);
+                resolve(true);
+            };
+            img.onerror = () => {
+                console.warn(`Failed to preload: ${src}`);
+                resolve(false); // Don't reject, just continue
             };
             img.src = src;
         });
@@ -208,22 +276,31 @@ export class AdSystem {
             .replace(/\b\w/g, l => l.toUpperCase());
     }
 
+    showLoadingAd() {
+        if (!this.adElement) return;
+
+        // Show a simple loading message
+        this.adElement.innerHTML = `
+            <div class="text-ad" style="text-align: center; color: var(--text-secondary);">
+                <h3 style="color: var(--accent-color); margin-bottom: 10px;">📺 Loading Ads...</h3>
+                <p style="margin: 0; font-style: italic;">Please wait while we load amazing offers!</p>
+            </div>
+        `;
+    }
+
     startRotation() {
-        if (this.ads.length === 0) return;
-
-        // Show first ad immediately
-        this.showCurrentAd();
-
-        // Set up rotation based on config
+        // Set up rotation interval even if no ads loaded yet
         this.rotationInterval = setInterval(() => {
-            this.nextAd();
+            if (this.shuffledAds.length > 0) {
+                this.nextAd();
+            }
         }, gameConfig.ads.rotationIntervalMs);
     }
 
     showCurrentAd() {
-        if (!this.adElement || this.ads.length === 0) return;
+        if (!this.adElement || this.shuffledAds.length === 0) return;
 
-        const ad = this.ads[this.currentAdIndex];
+        const ad = this.shuffledAds[this.shuffleIndex];
         this.currentAdData = ad;
 
         // Add leaving animation to current ad
@@ -248,13 +325,38 @@ export class AdSystem {
     }
 
     displayImageAd(ad) {
-        this.adElement.innerHTML = `
-            <img src="${ad.src}"
-                 alt="${ad.alt}"
-                 style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer;"
-                 onerror="this.style.display='none'"
-                 onclick="window.gameAdSystem.handleAdClick()">
-        `;
+        // Check if we have a preloaded version
+        const preloadedImg = this.preloadedImages.get(ad.src);
+
+        if (preloadedImg) {
+            // Use preloaded image for instant display
+            this.adElement.innerHTML = `
+                <img src="${ad.src}"
+                     alt="${ad.alt}"
+                     style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; opacity: 1; transition: opacity 0.3s ease;"
+                     onclick="window.gameAdSystem.handleAdClick()">
+            `;
+            console.log(`📸 Using preloaded image: ${ad.filename}`);
+        } else {
+            // Fallback to standard loading with loading indicator
+            this.adElement.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; min-height: 100px; color: var(--text-secondary);">
+                    <span>Loading ad...</span>
+                </div>
+            `;
+
+            // Load image asynchronously
+            setTimeout(() => {
+                this.adElement.innerHTML = `
+                    <img src="${ad.src}"
+                         alt="${ad.alt}"
+                         style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; opacity: 0; transition: opacity 0.3s ease;"
+                         onload="this.style.opacity = 1;"
+                         onerror="this.style.display='none'"
+                         onclick="window.gameAdSystem.handleAdClick()">
+                `;
+            }, 100);
+        }
     }
 
     displayTextAd(ad) {
@@ -268,7 +370,14 @@ export class AdSystem {
     }
 
     nextAd() {
-        this.currentAdIndex = (this.currentAdIndex + 1) % this.ads.length;
+        this.shuffleIndex++;
+
+        // If we've gone through all ads, reshuffle for next round
+        if (this.shuffleIndex >= this.shuffledAds.length) {
+            console.log('Completed full ad rotation, reshuffling...');
+            this.shuffleAds(); // This resets shuffleIndex to 0
+        }
+
         this.showCurrentAd();
     }
 
@@ -308,6 +417,9 @@ export class AdSystem {
         if (this.ads.length === 0) {
             this.ads = this.textAds;
         }
+
+        // Reshuffle with new ads
+        this.shuffleAds();
 
         console.log(`Ad library refreshed: ${this.ads.length} ads available`);
     }
@@ -379,16 +491,6 @@ export class AdSystem {
         });
     }
 
-    refreshAds() {
-        // Stop current rotation
-        if (this.rotationInterval) {
-            clearInterval(this.rotationInterval);
-        }
-
-        // Reload ads and restart rotation
-        this.init();
-        console.log('Ads refreshed');
-    }
 
     destroy() {
         if (this.rotationInterval) {

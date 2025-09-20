@@ -25,7 +25,22 @@ export const gameConfig = {
                 title: 'Charity for Kimmel',
                 message: 'Save the talk show hosts!\n\nThey have been fired for being naughty but they deserve a second chance.\n\nDonate now, every penny counts\n\n',
                 buttonText: 'Donate'
-            },            
+            },
+            'alienwarez-gaming-pc.jpg': {
+                title: '👽 Alienwarez Gaming PC',
+                message: 'Experience gaming like never before!\n\nFeatures:\n• Powered by actual alien technology\n• RGB lighting visible from space\n• Can run Crysis at 4K while queuing\n• Built-in queue acceleration cores\n• Comes with free abduction insurance!\n\nNow with 200% more FPS in waiting simulators!',
+                buttonText: 'Invade Cart'
+            },
+            'queuelife-insurnace.jpg': {
+                title: '🛡️ QueueLife Insurance',
+                message: 'Protect your most valuable asset: your position in line!\n\nCoverage includes:\n• Premium cut-in protection\n• System maintenance displacement benefits\n• Queue anxiety therapy sessions\n• Emergency queue skip vouchers\n• Peace of mind while waiting\n\n*Coverage not valid during actual emergencies or when queue reaches zero',
+                buttonText: 'Get Quote'
+            },
+            'wandering-queue-guild.jpg': {
+                title: '⚔️ Wandering Queue Guild',
+                message: 'Join the legendary guild of professional queue warriors!\n\nBenefits:\n• Epic queue combat training\n• Legendary waiting armor sets\n• Access to mythical queue dungeons\n• Guild hall with premium waiting areas\n• Weekly raid on the DMV queue boss\n\nLevel up your waiting skills today!',
+                buttonText: 'Join Guild'
+            },
             'default': {
                 title: '📢 Special Offer!',
                 message: 'Thanks for clicking on our ad!\n\nWhile you\'re waiting in queue, why not wait in another queue?\n\nOur premium queue experience offers:\n• Longer wait times\n• More uncertainty\n• Enhanced frustration levels',
@@ -36,12 +51,12 @@ export const gameConfig = {
 
     // Queue Position Settings
     queue: {
-        initialPositionMin: 15,     // Minimum starting position
-        initialPositionMax: 20,     // Maximum starting position
+        initialPositionMin: 150,     // Minimum starting position
+        initialPositionMax: 200,     // Maximum starting position
         updateIntervalMin: 500,        // Min time between position updates (ms)
         updateIntervalMax: 1500,       // Max time between position updates (ms)
         waitTimeUpdateChance: 0.01,    // Chance to update wait time each frame (0-1)
-        maxCountdownJump: 100,         // Maximum jump up for countdown timer
+        maxCountdownJump: 50,          // Maximum jump up for countdown timer
 
         // Position change events (chances should add up to 1.0)
         positionEvents: {
@@ -80,7 +95,7 @@ export const gameConfig = {
     news: {
         rotationIntervalMs: 10000,     // How long each news item stays (milliseconds)
         showTimestamp: true,           // Show "time ago" for each news item
-        maxItems: 20,                  // Maximum number of news items to load
+        maxItems: 50,                  // Maximum number of news items to load
         fadeTransition: true,          // Use fade transition between items
         autoStart: true                // Start news rotation automatically
     },

@@ -81,6 +81,8 @@ export class QueueSimulator {
         this.countdownSeconds = 0;
         this.pauseAtZero = false;
         this.pauseStartTime = 0;
+        this.inPredictableMode = false;
+        this.stickCount = 0; // Track consecutive sticks to force progression
     }
 
     // Event system
@@ -115,6 +117,8 @@ export class QueueSimulator {
         // Reset pause flags
         this.pauseAtZero = false;
         this.pauseStartTime = 0;
+        this.inPredictableMode = false;
+        this.stickCount = 0;
 
         // Set next update time (1-3 seconds with some randomness)
         this.scheduleNextUpdate();
@@ -128,7 +132,7 @@ export class QueueSimulator {
     scheduleNextUpdate() {
         const delay = Math.random() * (gameConfig.queue.updateIntervalMax - gameConfig.queue.updateIntervalMin) + gameConfig.queue.updateIntervalMin;
         this.nextUpdateTime = Date.now() + delay;
-        this.countdownSeconds = Math.ceil(delay / 1000);
+        // REMOVED: this.countdownSeconds = Math.ceil(delay / 1000); - This was interfering with countdown timer!
 
         this.updateInterval = setTimeout(() => {
             this.updateQueuePosition();
@@ -137,8 +141,20 @@ export class QueueSimulator {
     }
 
     startCountdown() {
+        // Set initial countdown to a reasonable value if it's 0
+        if (this.countdownSeconds === 0) {
+            this.countdownSeconds = Math.floor(Math.random() * 30) + 15; // 15-45 seconds initial
+        }
+
         const updateCountdown = () => {
             if (!this.state.isActive) return; // Stop if queue is not active
+
+            // ABSOLUTE SAFETY CHECK: Never allow countdown above 100
+            if (this.countdownSeconds > 100) {
+                const oldValue = this.countdownSeconds;
+                this.countdownSeconds = 100;
+                console.log(`SAFETY: Countdown capped at 100 (was ${oldValue})`);
+            }
 
             // Handle pause at zero first
             if (this.countdownSeconds === 0 && this.pauseAtZero) {
@@ -154,44 +170,86 @@ export class QueueSimulator {
                 }
             }
 
-            // Predictable countdown when <= 10 and > 0
-            if (this.countdownSeconds <= 10 && this.countdownSeconds > 0) {
-                // Predictable final countdown: always decrement by 1
-                this.countdownSeconds = Math.max(0, this.countdownSeconds - 1);
+            // IMPROVED TWO-ZONE SYSTEM
+            if (this.countdownSeconds > 10) {
+                // ERRATIC ZONE: > 10 (with reasonable limits)
+                this.inPredictableMode = false;
+
+                // Prevent countdown from going too high (absolute max: 100 seconds)
+                if (this.countdownSeconds > 100) {
+                    this.countdownSeconds = 50; // Reset to 50 seconds if too high
+                    console.log(`ERRATIC MODE: Countdown too high (was ${this.countdownSeconds}), reset to 50`);
+                }
+
+                console.log(`ERRATIC MODE: Starting at ${this.countdownSeconds}`);
+                const updateChance = Math.random();
+
+                // Force progression if stuck too many times
+                if (this.stickCount >= 3) {
+                    // Force move to 10 after 3 consecutive sticks
+                    this.countdownSeconds = 10;
+                    this.inPredictableMode = true;
+                    this.stickCount = 0;
+                    console.log(`ERRATIC MODE: FORCED progression after ${this.stickCount} sticks - ENTERING PREDICTABLE MODE at 10`);
+                } else if (updateChance < 0.15) {
+                    // 15% chance: Don't update countdown (timer "sticks") - reduced from 30%
+                    this.stickCount++;
+                    console.log(`ERRATIC MODE: Timer stuck at ${this.countdownSeconds} (stick #${this.stickCount})`);
+                } else if (updateChance < 0.30) {
+                    // 15% chance: Small jump (1-3 seconds)
+                    this.stickCount = 0; // Reset stick count when moving
+                    const jumpDirection = Math.random() < 0.95 ? -1 : 1; // 95% down, 5% up - heavily favor downward
+                    let jumpAmount = Math.floor(Math.random() * 3) + 1;
+
+                    if (jumpDirection > 0) {
+                        // STRICT upward jump limits
+                        jumpAmount = Math.min(jumpAmount, gameConfig.queue.maxCountdownJump, 100);
+                        const newValue = this.countdownSeconds + jumpAmount;
+
+                        // Hard cap: never go above 100 regardless of config or calculation
+                        this.countdownSeconds = Math.min(newValue, 100);
+                        console.log(`ERRATIC MODE: Small jump UP by ${jumpAmount} from ${this.countdownSeconds - jumpAmount} to ${this.countdownSeconds} (max 100)`);
+                    } else {
+                        // ANY downward movement from >10 ALWAYS lands on 10
+                        this.countdownSeconds = 10;
+                        this.inPredictableMode = true;
+                        console.log(`ERRATIC MODE: Jump down - ENTERING PREDICTABLE MODE at 10`);
+                    }
+                } else {
+                    // 75% chance: Normal countdown - ANY decrement from >10 lands on 10 - increased from 55%
+                    this.stickCount = 0; // Reset stick count when moving
+                    this.countdownSeconds = 10;
+                    this.inPredictableMode = true;
+                    console.log(`ERRATIC MODE: Normal countdown - ENTERING PREDICTABLE MODE at 10`);
+                }
+                console.log(`ERRATIC MODE: Ended at ${this.countdownSeconds}`);
+
+            } else if (this.countdownSeconds <= 10 && this.countdownSeconds > 0) {
+                // PREDICTABLE ZONE: Simple countdown 10→9→8→7→6→5→4→3→2→1→0
+                if (!this.inPredictableMode) {
+                    this.inPredictableMode = true;
+                    console.log(`ENTERING PREDICTABLE MODE at ${this.countdownSeconds}`);
+                }
+
+                console.log(`PREDICTABLE MODE: ${this.countdownSeconds} -> ${this.countdownSeconds - 1}`);
+                this.countdownSeconds = this.countdownSeconds - 1;
 
                 // If we just reached zero, start the pause
                 if (this.countdownSeconds === 0) {
+                    this.inPredictableMode = false;
                     this.pauseAtZero = true;
                     this.pauseStartTime = Date.now();
+                    console.log('STARTING 2-SECOND PAUSE AT ZERO');
                 }
-            } else if (this.countdownSeconds > 10) {
-                // Erratic behavior when > 10
-                const updateChance = Math.random();
 
-                if (updateChance < 0.3) {
-                    // 30% chance: Don't update countdown (timer "sticks")
-                    // Just emit the same value again
-                } else if (updateChance < 0.45) {
-                    // 15% chance: Small jump (1-3 seconds)
-                    const jumpDirection = Math.random() < 0.8 ? -1 : 1; // 80% down, 20% up
-                    const jumpAmount = Math.floor(Math.random() * 3) + 1;
-                    let newValue = this.countdownSeconds + (jumpDirection * jumpAmount);
-
-                    // Respect max jump limit when jumping up
-                    if (jumpDirection > 0) {
-                        newValue = Math.min(newValue, this.countdownSeconds + gameConfig.queue.maxCountdownJump);
-                    }
-
-                    this.countdownSeconds = Math.max(0, newValue);
-                } else {
-                    // 55% chance: Normal countdown (just decrement by 1)
-                    this.countdownSeconds = Math.max(0, this.countdownSeconds - 1);
-                }
             } else if (this.countdownSeconds === 0 && !this.pauseAtZero) {
-                // At zero but not in pause mode - occasionally reset to random value
-                if (Math.random() < 0.05) { // 5% chance
-                    const maxJump = Math.min(gameConfig.queue.maxCountdownJump, 50); // Cap at 50 or config max
-                    this.countdownSeconds = Math.floor(Math.random() * maxJump) + 10;
+                // RESET ZONE: At zero but not in pause
+                this.inPredictableMode = false;
+                this.stickCount = 0;
+                if (Math.random() < 0.02) { // 2% chance - very rare
+                    // Reset to a very reasonable range (15-35 seconds max)
+                    this.countdownSeconds = Math.floor(Math.random() * 20) + 15; // 15-35 range
+                    console.log(`RESET: Jumped to ${this.countdownSeconds}`);
                 }
             }
 
@@ -199,15 +257,17 @@ export class QueueSimulator {
 
             // Schedule next countdown update with appropriate interval
             let nextInterval;
-            if (this.countdownSeconds <= 10 && this.countdownSeconds >= 0 && !this.pauseAtZero) {
-                // Exact 1 second intervals during final countdown
+            if (this.inPredictableMode || (this.countdownSeconds <= 10 && this.countdownSeconds >= 0 && !this.pauseAtZero)) {
+                // STRICT: Exact 1 second intervals during predictable countdown
                 nextInterval = 1000;
+                console.log(`TIMING: Predictable mode - next update in 1000ms`);
             } else if (this.pauseAtZero) {
                 // Already handled above with 100ms checks during pause
                 return;
             } else {
                 // Erratic timing when > 10
                 nextInterval = Math.random() * 400 + 200; // 200-600ms random interval
+                console.log(`TIMING: Erratic mode - next update in ${nextInterval}ms`);
             }
             this.countdownInterval = setTimeout(updateCountdown, nextInterval);
         };
@@ -461,10 +521,12 @@ export class QueueSimulator {
             const saved = localStorage.getItem('queueSimulatorState');
             if (saved) {
                 const state = JSON.parse(saved);
-                this.state.currentQueue = state.currentQueue || 1;
+                // Always start from queue 1 on page refresh, but keep achievements and stats
+                this.state.currentQueue = 1; // Force start from queue 1
                 this.state.totalWaitTime = state.totalWaitTime || 0;
                 this.state.achievements = state.achievements || [];
                 this.state.queueTheme = this.getCurrentQueue().theme;
+                console.log('State loaded: Starting from Queue 1, preserving achievements/stats');
             }
         } catch (error) {
             console.warn('Failed to load state:', error);
