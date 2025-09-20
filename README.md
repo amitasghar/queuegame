@@ -209,4 +209,4 @@ For bug reports, feature requests, or general feedback, please reach out via ema
 
 **Remember**: The goal isn't to escape the queue—the queue IS the destination! 🎯
 
-*© 2024 Sagarika Games*
+*© 2025 Sagarika Games*

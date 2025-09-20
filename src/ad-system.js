@@ -333,7 +333,7 @@ export class AdSystem {
             this.adElement.innerHTML = `
                 <img src="${ad.src}"
                      alt="${ad.alt}"
-                     style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; opacity: 1; transition: opacity 0.3s ease;"
+                     style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; opacity: 1; transition: opacity 0.3s ease; border: 2px solid var(--accent-color); box-shadow: 0 0 15px rgba(0, 204, 255, 0.4);"
                      onclick="window.gameAdSystem.handleAdClick()">
             `;
             console.log(`📸 Using preloaded image: ${ad.filename}`);
@@ -350,7 +350,7 @@ export class AdSystem {
                 this.adElement.innerHTML = `
                     <img src="${ad.src}"
                          alt="${ad.alt}"
-                         style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; opacity: 0; transition: opacity 0.3s ease;"
+                         style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; opacity: 0; transition: opacity 0.3s ease; border: 2px solid var(--accent-color); box-shadow: 0 0 15px rgba(0, 204, 255, 0.4);"
                          onload="this.style.opacity = 1;"
                          onerror="this.style.display='none'"
                          onclick="window.gameAdSystem.handleAdClick()">
