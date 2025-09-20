@@ -1,0 +1,177 @@
+/* Theme styles for different queue levels */
+
+/* Default/Queue 1 - Basic terminal style */
+.theme-basic {
+    --primary-bg: #1a1a1a;
+    --secondary-bg: #2a2a2a;
+    --text-primary: #00ff00;
+    --text-secondary: #888;
+    --accent-color: #ffff00;
+    --border-color: #333;
+    --progress-bg: #444;
+    --progress-fill: #00ff00;
+}
+
+/* Queue 2 - The Queuening (Fancy/Corporate) */
+.theme-fancy {
+    --primary-bg: #f8f9fa;
+    --secondary-bg: #ffffff;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --accent-color: #007bff;
+    --border-color: #dee2e6;
+    --progress-bg: #e9ecef;
+    --progress-fill: #007bff;
+}
+
+.theme-fancy body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.theme-fancy #queue-container {
+    box-shadow: 0 4px 20px rgba(0, 123, 255, 0.15);
+}
+
+/* Queue 3 - Queue Hard (Action/Military) */
+.theme-action {
+    --primary-bg: #0d1117;
+    --secondary-bg: #161b22;
+    --text-primary: #ff4444;
+    --text-secondary: #8b949e;
+    --accent-color: #ff6b35;
+    --border-color: #30363d;
+    --progress-bg: #21262d;
+    --progress-fill: #ff4444;
+}
+
+.theme-action #queue-title {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+
+.theme-action #queue-container {
+    box-shadow: 0 0 30px rgba(255, 68, 68, 0.2);
+    border-color: #ff4444;
+}
+
+/* Queue 4 - Queue Wars (Space/Sci-fi) */
+.theme-space {
+    --primary-bg: #0f0520;
+    --secondary-bg: #1a0b3d;
+    --text-primary: #00ffff;
+    --text-secondary: #9d4edd;
+    --accent-color: #e0aaff;
+    --border-color: #5a189a;
+    --progress-bg: #240046;
+    --progress-fill: #00ffff;
+}
+
+.theme-space #queue-container {
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+    background: linear-gradient(135deg, var(--secondary-bg), #240046);
+}
+
+.theme-space #queue-title {
+    color: var(--accent-color);
+    text-shadow: 0 0 20px var(--accent-color);
+}
+
+/* Queue 5 - Queue Royale (Battle/Gaming) */
+.theme-battle {
+    --primary-bg: #2d1b00;
+    --secondary-bg: #4a2c00;
+    --text-primary: #ffd700;
+    --text-secondary: #cd853f;
+    --accent-color: #ff8c00;
+    --border-color: #8b4513;
+    --progress-bg: #654321;
+    --progress-fill: #ffd700;
+}
+
+.theme-battle #queue-container {
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+    border: 3px solid var(--accent-color);
+}
+
+/* Queue 6 - The Queue Awakens (Mystical/Zen) */
+.theme-mystical {
+    --primary-bg: #1a0b2e;
+    --secondary-bg: #16213e;
+    --text-primary: #eee8aa;
+    --text-secondary: #dda0dd;
+    --accent-color: #daa520;
+    --border-color: #483d8b;
+    --progress-bg: #2f1b69;
+    --progress-fill: #daa520;
+}
+
+.theme-mystical #queue-container {
+    box-shadow: 0 0 50px rgba(218, 165, 32, 0.3);
+    background: radial-gradient(circle at center, var(--secondary-bg), var(--primary-bg));
+}
+
+.theme-mystical #queue-title {
+    font-style: italic;
+    text-shadow: 0 0 15px var(--accent-color);
+}
+
+/* Queue ∞ - Infinite (Glitch/Matrix) */
+.theme-infinite {
+    --primary-bg: #000000;
+    --secondary-bg: #001100;
+    --text-primary: #00ff41;
+    --text-secondary: #008f11;
+    --accent-color: #39ff14;
+    --border-color: #003300;
+    --progress-bg: #001a00;
+    --progress-fill: #00ff41;
+}
+
+.theme-infinite {
+    animation: glitch 2s infinite;
+}
+
+.theme-infinite #queue-container {
+    box-shadow: 0 0 60px rgba(0, 255, 65, 0.5);
+    border: 2px solid var(--accent-color);
+}
+
+.theme-infinite #queue-title {
+    animation: textGlitch 1.5s infinite;
+}
+
+/* Theme transition animations */
+.theme-transition {
+    transition: all 1s ease-in-out;
+}
+
+@keyframes glitch {
+    0%, 90%, 100% {
+        transform: translate(0);
+    }
+    10% {
+        transform: translate(-1px, -1px);
+    }
+    20% {
+        transform: translate(1px, 1px);
+    }
+    30% {
+        transform: translate(-1px, 1px);
+    }
+    40% {
+        transform: translate(1px, -1px);
+    }
+}
+
+@keyframes textGlitch {
+    0%, 90%, 100% {
+        text-shadow: 0 0 10px var(--accent-color);
+    }
+    10% {
+        text-shadow: 2px 0 0 #ff0000, -2px 0 0 #00ffff;
+    }
+    20% {
+        text-shadow: -2px 0 0 #ff0000, 2px 0 0 #00ffff;
+    }
+}

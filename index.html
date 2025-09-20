@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue Game</title>
+    <link rel="stylesheet" href="./assets/styles/main.css">
+    <link rel="stylesheet" href="./assets/styles/themes.css">
+    <link rel="stylesheet" href="./assets/styles/animations.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <div id="start-container">
+                <h1 id="start-title">Queue Game</h1>
+                <p id="start-description">
+                    Welcome to the ultimate waiting experience!<br>
+                    Join the queue and discover what lies beyond...
+                </p>
+                <button id="play-button" class="play-button">
+                    🎮 Play Game
+                </button>
+                <div id="start-disclaimer">
+                    <small>Warning: May cause existential questioning about digital queues</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen (hidden initially) -->
+        <div id="queue-container" style="display: none;">
+            <div id="queue-header">
+                <h1 id="queue-title">Queue Game</h1>
+                <div id="position-main">
+                    <div id="position-label">Position in queue</div>
+                    <div id="position-number">
+                        <span id="current-position">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="queue-main">
+                <div id="queue-status">
+                    <div id="queue-message">Welcome to the queue!</div>
+                </div>
+
+                <div id="news-container">
+                    <div id="news-header">
+                        <h3>📰 Queue News</h3>
+                    </div>
+                    <div id="news-ticker">
+                        Loading news...
+                    </div>
+                </div>
+
+                <div id="ad-container">
+                    <div id="ad-display">
+                        <div id="current-ad">Loading advertisements...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="queue-footer">
+                <div id="controls-panel">
+                    <button id="share-button" class="control-button">📢 Share Queue</button>
+                    <button id="premium-button" class="control-button premium">💎 Buy Queue Skip Pro™</button>
+                    <button id="config-button" class="control-button">🎵 Music</button>
+                    <button id="reset-button" class="control-button danger">⚠️ Reset Progress</button>
+                </div>
+
+                <div id="wait-time-display">
+                    <small>Estimated wait: <span id="current-wait-time">---</span></small>
+                </div>
+
+                <div id="achievements-panel">
+                    <h3>Achievements <span id="achievement-count">(0/12)</span></h3>
+                    <div id="achievements-list"></div>
+                </div>
+
+                <div id="stats-panel">
+                    <h3>Statistics</h3>
+                    <div id="stats-display">
+                        <div class="stat-item">
+                            <span class="stat-label">Queues Completed:</span>
+                            <span id="stat-queues" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Wait Time:</span>
+                            <span id="stat-time" class="stat-value">0m</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Queue Events:</span>
+                            <span id="stat-events" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Ad Clicks:</span>
+                            <span id="stat-clicks" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+This folder is for JPG advertisement images.
+
+To add ads:
+1. Create satirical JPG banner ads (800x200 px recommended)
+2. Save them in this folder with descriptive names like:
+   - skipline-pro.jpg
+   - queue-anxiety-pills.jpg
+   - gaming-chair-supreme.jpg
+   - premium-queue-pass.jpg
+   etc.
+
+The ad system will automatically detect and rotate through any JPG files placed here.
+
+If no images are found, the system falls back to text-based ads.
