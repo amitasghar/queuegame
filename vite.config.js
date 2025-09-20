@@ -11,19 +11,33 @@ export default defineConfig({
     rollupOptions: {
       plugins: [
         {
-          name: 'copy-ads',
+          name: 'copy-assets',
           writeBundle() {
             // Copy ads folder to dist
-            const sourceDir = 'assets/images/ads'
-            const targetDir = 'dist/assets/images/ads'
+            const adsSourceDir = 'assets/images/ads'
+            const adsTargetDir = 'dist/assets/images/ads'
 
-            if (existsSync(sourceDir)) {
-              mkdirSync(targetDir, { recursive: true })
+            if (existsSync(adsSourceDir)) {
+              mkdirSync(adsTargetDir, { recursive: true })
 
-              const files = readdirSync(sourceDir)
-              files.forEach(file => {
-                copyFileSync(join(sourceDir, file), join(targetDir, file))
-                console.log(`Copied: ${file}`)
+              const adsFiles = readdirSync(adsSourceDir)
+              adsFiles.forEach(file => {
+                copyFileSync(join(adsSourceDir, file), join(adsTargetDir, file))
+                console.log(`Copied ad: ${file}`)
+              })
+            }
+
+            // Copy sounds folder to dist
+            const soundsSourceDir = 'assets/sounds'
+            const soundsTargetDir = 'dist/assets/sounds'
+
+            if (existsSync(soundsSourceDir)) {
+              mkdirSync(soundsTargetDir, { recursive: true })
+
+              const soundFiles = readdirSync(soundsSourceDir)
+              soundFiles.forEach(file => {
+                copyFileSync(join(soundsSourceDir, file), join(soundsTargetDir, file))
+                console.log(`Copied sound: ${file}`)
               })
             }
           }
