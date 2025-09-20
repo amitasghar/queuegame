@@ -93,7 +93,7 @@ export const gameConfig = {
 
     // News System Settings
     news: {
-        rotationIntervalMs: 10000,     // How long each news item stays (milliseconds)
+        rotationIntervalMs: 15000,     // How long each news item stays (milliseconds)
         showTimestamp: true,           // Show "time ago" for each news item
         maxItems: 50,                  // Maximum number of news items to load
         fadeTransition: true,          // Use fade transition between items
