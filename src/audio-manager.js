@@ -402,6 +402,11 @@ export class AudioManager {
             if (this.musicToggleButton) {
                 this.musicToggleButton.style.opacity = this.isBackgroundMusicPlaying ? '1' : '0.5';
             }
+
+            // Auto-hide controls after interaction
+            setTimeout(() => {
+                controlsContainer.style.display = 'none';
+            }, 1500);
         });
 
         // Music toggle button
@@ -436,6 +441,11 @@ export class AudioManager {
                 }
             }
             this.updateMusicStatus(statusIndicator);
+
+            // Auto-hide controls after interaction
+            setTimeout(() => {
+                controlsContainer.style.display = 'none';
+            }, 1500);
         });
 
         // Update music button appearance based on current state
@@ -454,8 +464,15 @@ export class AudioManager {
             accent-color: var(--accent-color);
         `;
 
+        let volumeHideTimeout;
         volumeSlider.addEventListener('input', (e) => {
             this.setVolume(parseFloat(e.target.value));
+
+            // Clear existing timeout and set new one for auto-hide
+            clearTimeout(volumeHideTimeout);
+            volumeHideTimeout = setTimeout(() => {
+                controlsContainer.style.display = 'none';
+            }, 2000); // Auto-hide after 2 seconds of no volume changes
         });
 
         // Store references for later updates

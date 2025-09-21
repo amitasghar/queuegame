@@ -83,6 +83,13 @@ class Game {
         // Create enhanced audio controls
         this.audioControls = this.audioManager.createAudioControls();
 
+        // Auto-hide audio controls after 5 seconds
+        setTimeout(() => {
+            if (this.audioControls) {
+                this.audioControls.style.display = 'none';
+            }
+        }, 5000);
+
         // Initialize queue simulator
         this.queueSimulator.init();
 
@@ -540,10 +547,16 @@ class Game {
             if (this.audioManager.musicToggleButton) {
                 this.audioManager.musicToggleButton.style.opacity = this.audioManager.isBackgroundMusicPlaying ? '1' : '0.5';
             }
+
+            // Auto-close popup after music toggle
+            setTimeout(() => {
+                closePopup();
+            }, 1000);
         });
 
         // Update volume display in real-time and apply changes immediately
         const musicVolumeSlider = popup.querySelector('#config-music-volume');
+        let volumeTimeout;
 
         musicVolumeSlider.addEventListener('input', (e) => {
             const span = e.target.nextElementSibling;
@@ -554,6 +567,12 @@ class Game {
             if (this.audioManager.backgroundMusic) {
                 this.audioManager.backgroundMusic.volume = parseFloat(e.target.value);
             }
+
+            // Clear existing timeout and set new one for auto-close
+            clearTimeout(volumeTimeout);
+            volumeTimeout = setTimeout(() => {
+                closePopup();
+            }, 2000); // Auto-close after 2 seconds of no volume changes
         });
 
         const closePopup = () => popup.remove();
