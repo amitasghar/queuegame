@@ -318,15 +318,15 @@ export class AudioManager {
             if (this.sounds[this.currentTheme]?.background) {
                 this.sounds[this.currentTheme].background.play();
             }
-            // Resume background music if it was playing before mute
-            if (this.backgroundMusic && this.wasPlayingBeforeMute) {
-                console.log('Resuming background music after unmute');
+
+            // When unmuting, always try to start music (whether it was playing before or not)
+            if (this.backgroundMusic) {
+                console.log('Starting background music after unmute');
+                // Clear any blocked state since this is user-initiated
+                localStorage.removeItem('musicBlocked');
                 this.playBackgroundMusic();
             } else {
-                console.log('Not resuming music:', {
-                    hasBackgroundMusic: !!this.backgroundMusic,
-                    wasPlayingBeforeMute: this.wasPlayingBeforeMute
-                });
+                console.log('No background music available to start');
             }
         }
 
