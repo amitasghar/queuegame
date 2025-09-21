@@ -8,6 +8,7 @@ export class AdSystem {
         this.adElement = null;
         this.rotationInterval = null;
         this.isLoading = false;
+        this.isPaused = false;
         this.currentAdData = null;
         this.shuffledAds = [];
         this.shuffleIndex = 0;
@@ -289,9 +290,15 @@ export class AdSystem {
     }
 
     startRotation() {
+        // Don't start rotation if paused
+        if (this.isPaused) {
+            console.log('Skipping ad rotation start - system is paused');
+            return;
+        }
+
         // Set up rotation interval even if no ads loaded yet
         this.rotationInterval = setInterval(() => {
-            if (this.shuffledAds.length > 0) {
+            if (!this.isPaused && this.shuffledAds.length > 0) {
                 this.nextAd();
             }
         }, gameConfig.ads.rotationIntervalMs);
@@ -491,6 +498,23 @@ export class AdSystem {
         });
     }
 
+
+    pause() {
+        this.isPaused = true;
+        if (this.rotationInterval) {
+            clearInterval(this.rotationInterval);
+            this.rotationInterval = null;
+        }
+        console.log('Ad system paused');
+    }
+
+    resume() {
+        this.isPaused = false;
+        if (this.ads.length > 0) {
+            this.startRotation();
+        }
+        console.log('Ad system resumed');
+    }
 
     destroy() {
         if (this.rotationInterval) {

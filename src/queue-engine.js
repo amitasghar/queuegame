@@ -75,6 +75,7 @@ export class QueueSimulator {
 
         this.eventListeners = {};
         this.updateInterval = null;
+        this.isPaused = false;
         this.countdownInterval = null;
         this.eventCooldown = 0;
         this.nextUpdateTime = 0;
@@ -130,13 +131,22 @@ export class QueueSimulator {
     }
 
     scheduleNextUpdate() {
+        // Don't schedule updates if paused
+        if (this.isPaused) {
+            console.log('Skipping update scheduling - game is paused');
+            return;
+        }
+
         const delay = Math.random() * (gameConfig.queue.updateIntervalMax - gameConfig.queue.updateIntervalMin) + gameConfig.queue.updateIntervalMin;
         this.nextUpdateTime = Date.now() + delay;
         // REMOVED: this.countdownSeconds = Math.ceil(delay / 1000); - This was interfering with countdown timer!
 
         this.updateInterval = setTimeout(() => {
-            this.updateQueuePosition();
-            this.scheduleNextUpdate(); // Schedule the next update
+            // Check if still not paused when timeout fires
+            if (!this.isPaused) {
+                this.updateQueuePosition();
+                this.scheduleNextUpdate(); // Schedule the next update
+            }
         }, delay);
     }
 
@@ -551,6 +561,21 @@ export class QueueSimulator {
         }, 1000);
 
         return { success: true, message: 'Purchase successful! Processing...' };
+    }
+
+    pause() {
+        this.isPaused = true;
+        console.log('Queue simulator paused');
+    }
+
+    resume() {
+        this.isPaused = false;
+        console.log('Queue simulator resumed');
+
+        // Resume the update cycle if the game is active
+        if (this.state.isActive) {
+            this.scheduleNextUpdate();
+        }
     }
 
     destroy() {

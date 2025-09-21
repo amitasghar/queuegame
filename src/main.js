@@ -23,6 +23,10 @@ class Game {
         this.cheatCodes = {
             'iddqd': () => this.activateCheat()
         };
+
+        // Game state for focus/blur handling
+        this.isPaused = false;
+        this.wasPlayingMusic = false;
     }
 
     async init() {
@@ -38,6 +42,9 @@ class Game {
 
             // Bind start screen
             this.bindStartScreen();
+
+            // Set up window focus/blur handling
+            this.setupFocusHandling();
 
             this.isInitialized = true;
             console.log('Queue Game initialized successfully - waiting for user to start');
@@ -72,6 +79,9 @@ class Game {
 
         // Start background music if loaded
         this.audioManager.playBackgroundMusic();
+
+        // Create enhanced audio controls
+        this.audioControls = this.audioManager.createAudioControls();
 
         // Initialize queue simulator
         this.queueSimulator.init();
@@ -141,9 +151,9 @@ class Game {
         });
 
 
-        // Config button
+        // Config button - show enhanced audio controls
         document.getElementById('config-button')?.addEventListener('click', () => {
-            this.showConfigPanel();
+            this.toggleAudioControls();
         });
 
         // Reset button
@@ -418,14 +428,42 @@ class Game {
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         `;
 
+        const musicStatus = this.audioManager.isBackgroundMusicPlaying ? 'ON' : 'OFF';
+        const musicStatusColor = this.audioManager.isBackgroundMusicPlaying ? 'var(--accent-color)' : 'var(--text-secondary)';
+        const musicBlocked = localStorage.getItem('musicBlocked') === 'true';
+
         popup.innerHTML = `
             <h3 style="color: var(--accent-color); margin-bottom: 20px; text-align: center;">🎵 Music Settings</h3>
 
             <div style="margin-bottom: 25px; text-align: center;">
-                <label style="display: block; margin-bottom: 10px; color: var(--text-primary); font-size: 1.1em;">Background Music Volume:</label>
-                <input type="range" id="config-music-volume" value="${window.gameConfig.audio.backgroundMusicVolume}"
-                       min="0" max="1" step="0.1" style="width: 100%; margin-bottom: 10px;">
-                <span style="color: var(--accent-color); font-size: 1.2em; font-weight: bold;">${Math.round(window.gameConfig.audio.backgroundMusicVolume * 100)}%</span>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; color: var(--text-primary); font-size: 1.1em;">Background Music:</label>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px;">
+                        <button id="music-toggle" style="
+                            padding: 10px 20px;
+                            background: ${this.audioManager.isBackgroundMusicPlaying ? 'var(--accent-color)' : 'transparent'};
+                            color: ${this.audioManager.isBackgroundMusicPlaying ? 'var(--primary-bg)' : 'var(--accent-color)'};
+                            border: 2px solid var(--accent-color);
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-family: inherit;
+                            font-weight: bold;
+                            font-size: 16px;
+                            transition: all 0.2s ease;
+                        ">${this.audioManager.isBackgroundMusicPlaying ? '🎵 ON' : '🔇 OFF'}</button>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
+                        Status: <span style="color: ${musicStatusColor}; font-weight: bold;">${musicStatus}</span>
+                        ${musicBlocked ? '<br><span style="color: #ff6b6b;">⚠️ Click button to enable music</span>' : ''}
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 10px; color: var(--text-primary); font-size: 1.1em;">Volume:</label>
+                    <input type="range" id="config-music-volume" value="${window.gameConfig.audio.backgroundMusicVolume}"
+                           min="0" max="1" step="0.1" style="width: 100%; margin-bottom: 10px;">
+                    <span style="color: var(--accent-color); font-size: 1.2em; font-weight: bold;">${Math.round(window.gameConfig.audio.backgroundMusicVolume * 100)}%</span>
+                </div>
             </div>
 
             <div style="display: flex; gap: 10px; justify-content: center;">
@@ -443,6 +481,66 @@ class Game {
         `;
 
         document.body.appendChild(popup);
+
+        // Music toggle functionality
+        const musicToggleButton = popup.querySelector('#music-toggle');
+        musicToggleButton.addEventListener('click', async () => {
+            if (this.audioManager.isBackgroundMusicPlaying) {
+                // Turn music OFF
+                this.audioManager.pauseBackgroundMusic();
+                musicToggleButton.innerHTML = '🔇 OFF';
+                musicToggleButton.style.background = 'transparent';
+                musicToggleButton.style.color = 'var(--accent-color)';
+
+                // Update status text
+                const statusSpan = popup.querySelector('span[style*="font-weight: bold"]');
+                if (statusSpan) {
+                    statusSpan.textContent = 'OFF';
+                    statusSpan.style.color = 'var(--text-secondary)';
+                }
+            } else {
+                // Turn music ON
+                console.log('User manually requested music - attempting to play');
+
+                // Clear any blocked state since this is user-initiated
+                localStorage.removeItem('musicBlocked');
+
+                const success = await this.audioManager.playBackgroundMusic();
+
+                if (success) {
+                    musicToggleButton.innerHTML = '🎵 ON';
+                    musicToggleButton.style.background = 'var(--accent-color)';
+                    musicToggleButton.style.color = 'var(--primary-bg)';
+
+                    // Update status text
+                    const statusSpan = popup.querySelector('span[style*="font-weight: bold"]');
+                    if (statusSpan) {
+                        statusSpan.textContent = 'ON';
+                        statusSpan.style.color = 'var(--accent-color)';
+                    }
+
+                    // Remove any warning message
+                    const warningSpan = popup.querySelector('span[style*="#ff6b6b"]');
+                    if (warningSpan) {
+                        warningSpan.remove();
+                    }
+                } else {
+                    // Show feedback that it failed
+                    musicToggleButton.innerHTML = '❌ Blocked';
+                    setTimeout(() => {
+                        musicToggleButton.innerHTML = '🔇 OFF';
+                    }, 2000);
+                }
+            }
+
+            // Update enhanced audio controls if they exist
+            if (this.audioManager.musicStatusIndicator) {
+                this.audioManager.updateMusicStatus(this.audioManager.musicStatusIndicator);
+            }
+            if (this.audioManager.musicToggleButton) {
+                this.audioManager.musicToggleButton.style.opacity = this.audioManager.isBackgroundMusicPlaying ? '1' : '0.5';
+            }
+        });
 
         // Update volume display in real-time and apply changes immediately
         const musicVolumeSlider = popup.querySelector('#config-music-volume');
@@ -703,13 +801,188 @@ class Game {
             popup.remove();
         });
     }
+
+    toggleAudioControls() {
+        if (this.audioControls) {
+            // Toggle visibility of existing controls
+            const isVisible = this.audioControls.style.display !== 'none';
+            this.audioControls.style.display = isVisible ? 'none' : 'flex';
+        } else {
+            // Create controls if they don't exist
+            this.audioControls = this.audioManager.createAudioControls();
+        }
+    }
+
+    setupFocusHandling() {
+        // Handle window focus/blur for automatic pausing
+        window.addEventListener('blur', () => {
+            if (!this.isPaused && this.queueSimulator?.state?.isActive) {
+                console.log('Window lost focus - pausing game');
+                this.pauseGame();
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            if (this.isPaused) {
+                console.log('Window gained focus - resuming game');
+                this.resumeGame();
+            }
+        });
+
+        // Also handle document visibility change (more reliable for some browsers)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (!this.isPaused && this.queueSimulator?.state?.isActive) {
+                    console.log('Tab hidden - pausing game');
+                    this.pauseGame();
+                }
+            } else {
+                if (this.isPaused) {
+                    console.log('Tab visible - resuming game');
+                    this.resumeGame();
+                }
+            }
+        });
+    }
+
+    pauseGame() {
+        this.isPaused = true;
+
+        // Pause background music
+        this.wasPlayingMusic = this.audioManager.isBackgroundMusicPlaying;
+        if (this.wasPlayingMusic) {
+            this.audioManager.pauseBackgroundMusic();
+        }
+
+        // Pause queue simulator
+        if (this.queueSimulator) {
+            this.queueSimulator.pause();
+        }
+
+        // Pause news system
+        if (this.newsSystem) {
+            this.newsSystem.pause();
+        }
+
+        // Pause ad system
+        if (this.adSystem) {
+            this.adSystem.pause();
+        }
+
+        // Show pause indicator
+        this.showPauseIndicator();
+
+        console.log('Game paused');
+    }
+
+    resumeGame() {
+        this.isPaused = false;
+
+        // Resume background music if it was playing
+        if (this.wasPlayingMusic) {
+            this.audioManager.playBackgroundMusic();
+        }
+
+        // Resume queue simulator
+        if (this.queueSimulator) {
+            this.queueSimulator.resume();
+        }
+
+        // Resume news system
+        if (this.newsSystem) {
+            this.newsSystem.resume();
+        }
+
+        // Resume ad system
+        if (this.adSystem) {
+            this.adSystem.resume();
+        }
+
+        // Hide pause indicator
+        this.hidePauseIndicator();
+
+        console.log('Game resumed');
+    }
+
+    showPauseIndicator() {
+        // Remove existing indicator if present
+        this.hidePauseIndicator();
+
+        const indicator = document.createElement('div');
+        indicator.id = 'pause-indicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: var(--accent-color);
+            padding: 20px 40px;
+            border-radius: 12px;
+            border: 2px solid var(--accent-color);
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10000;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 204, 255, 0.5);
+        `;
+        indicator.innerHTML = `
+            ⏸️ Game Paused<br>
+            <small style="font-size: 14px; opacity: 0.8;">Switch back to continue waiting</small>
+        `;
+
+        document.body.appendChild(indicator);
+    }
+
+    hidePauseIndicator() {
+        const indicator = document.getElementById('pause-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
 }
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     const game = new Game();
+    window.gameInstance = game; // Make available globally for debugging
     game.init();
 });
 
 // Export for debugging
 window.QueueGame = Game;
+
+// Add debugging functions
+window.debugAudio = () => {
+    const game = window.gameInstance;
+    if (game && game.audioManager) {
+        console.log('=== Audio Debug Info ===');
+        console.log('Audio Manager:', game.audioManager);
+        console.log('Background Music:', game.audioManager.backgroundMusic);
+        console.log('Is Playing:', game.audioManager.isBackgroundMusicPlaying);
+        console.log('Is Muted:', game.audioManager.isMuted);
+        console.log('Volume:', game.audioManager.volume);
+
+        if (game.audioManager.backgroundMusic) {
+            console.log('Audio Element State:', {
+                src: game.audioManager.backgroundMusic.src,
+                volume: game.audioManager.backgroundMusic.volume,
+                paused: game.audioManager.backgroundMusic.paused,
+                readyState: game.audioManager.backgroundMusic.readyState,
+                networkState: game.audioManager.backgroundMusic.networkState,
+                error: game.audioManager.backgroundMusic.error
+            });
+        }
+    }
+};
+
+window.forcePlayMusic = async () => {
+    const game = window.gameInstance;
+    if (game && game.audioManager) {
+        console.log('=== Force Playing Music ===');
+        localStorage.removeItem('musicBlocked');
+        const result = await game.audioManager.playBackgroundMusic();
+        console.log('Play result:', result);
+        return result;
+    }
+};

@@ -9,6 +9,7 @@ export class NewsSystem {
         this.newsElement = null;
         this.rotationInterval = null;
         this.isActive = false;
+        this.isPaused = false;
     }
 
     async init() {
@@ -236,6 +237,20 @@ export class NewsSystem {
         }
 
         console.log('News feed refreshed');
+    }
+
+    pause() {
+        this.isPaused = true;
+        this.stopRotation();
+        console.log('News system paused');
+    }
+
+    resume() {
+        this.isPaused = false;
+        if (this.newsItems.length > 0) {
+            this.startRotation();
+        }
+        console.log('News system resumed');
     }
 
     destroy() {

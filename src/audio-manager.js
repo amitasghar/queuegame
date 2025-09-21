@@ -10,6 +10,7 @@ export class AudioManager {
         this.volume = gameConfig.audio.soundEffectsVolume;
         this.backgroundMusic = null;
         this.isBackgroundMusicPlaying = false;
+        this.wasPlayingBeforeMute = false; // Track music state before muting
 
         // Audio file mappings (placeholder - actual files would need to be added)
         this.themeAudio = {
@@ -63,6 +64,9 @@ export class AudioManager {
             this.loadDefaultBackgroundMusic().catch(error => {
                 console.warn('Background music failed to load:', error);
             });
+
+            // Set up user interaction listeners for audio
+            this.setupUserInteractionListeners();
 
             console.log('Audio Manager initialized');
             return true;
@@ -178,7 +182,30 @@ export class AudioManager {
             this.backgroundMusic.volume = gameConfig.audio.backgroundMusicVolume;
             this.backgroundMusic.src = gameConfig.audio.backgroundMusicFile;
 
-            console.log('Background music configured (will load when played)');
+            console.log('Background music configured:', {
+                src: this.backgroundMusic.src,
+                volume: this.backgroundMusic.volume,
+                loop: this.backgroundMusic.loop
+            });
+
+            // Add error listeners for debugging
+            this.backgroundMusic.addEventListener('error', (e) => {
+                console.error('Audio error:', e);
+                console.error('Audio error details:', {
+                    error: this.backgroundMusic.error,
+                    networkState: this.backgroundMusic.networkState,
+                    readyState: this.backgroundMusic.readyState
+                });
+            });
+
+            this.backgroundMusic.addEventListener('canplaythrough', () => {
+                console.log('Audio can play through');
+            });
+
+            this.backgroundMusic.addEventListener('loadstart', () => {
+                console.log('Audio load started');
+            });
+
             return true;
         } catch (error) {
             console.warn('Failed to configure background music:', error);
@@ -219,8 +246,16 @@ export class AudioManager {
             await this.backgroundMusic.play();
             this.isBackgroundMusicPlaying = true;
             console.log('Background music started');
+
+            // Store that user has interacted and music can play
+            localStorage.setItem('musicEnabled', 'true');
         } catch (error) {
-            console.warn('Failed to play background music:', error);
+            if (error.name === 'NotAllowedError') {
+                console.log('Music blocked by browser autoplay policy - user interaction required');
+                localStorage.setItem('musicBlocked', 'true');
+            } else {
+                console.warn('Failed to play background music:', error);
+            }
         }
     }
 
@@ -228,6 +263,11 @@ export class AudioManager {
         if (this.backgroundMusic) {
             this.backgroundMusic.pause();
             this.isBackgroundMusicPlaying = false;
+
+            // Update status display
+            if (this.musicStatusIndicator) {
+                this.updateMusicStatus(this.musicStatusIndicator);
+            }
         }
     }
 
@@ -260,6 +300,9 @@ export class AudioManager {
         this.isMuted = !this.isMuted;
 
         if (this.isMuted) {
+            // Store current music state before muting
+            this.wasPlayingBeforeMute = this.isBackgroundMusicPlaying;
+
             // Stop all sounds
             Object.values(this.sounds).forEach(themeSounds => {
                 Object.values(themeSounds).forEach(sound => {
@@ -268,22 +311,35 @@ export class AudioManager {
             });
             // Pause background music
             this.pauseBackgroundMusic();
+
+            console.log('Audio muted, was playing before:', this.wasPlayingBeforeMute);
         } else {
             // Resume background music for current theme
             if (this.sounds[this.currentTheme]?.background) {
                 this.sounds[this.currentTheme].background.play();
             }
-            // Resume background music if it was playing
-            if (this.backgroundMusic && this.isBackgroundMusicPlaying) {
+            // Resume background music if it was playing before mute
+            if (this.backgroundMusic && this.wasPlayingBeforeMute) {
+                console.log('Resuming background music after unmute');
                 this.playBackgroundMusic();
+            } else {
+                console.log('Not resuming music:', {
+                    hasBackgroundMusic: !!this.backgroundMusic,
+                    wasPlayingBeforeMute: this.wasPlayingBeforeMute
+                });
             }
+        }
+
+        // Update status display if it exists
+        if (this.musicStatusIndicator) {
+            this.updateMusicStatus(this.musicStatusIndicator);
         }
 
         console.log(`Audio ${this.isMuted ? 'muted' : 'unmuted'}`);
         return this.isMuted;
     }
 
-    // Create audio controls UI
+    // Create enhanced audio controls UI
     createAudioControls() {
         const controlsContainer = document.createElement('div');
         controlsContainer.style.cssText = `
@@ -291,31 +347,99 @@ export class AudioManager {
             bottom: 20px;
             right: 20px;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 8px;
             background: var(--secondary-bg);
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
+            box-shadow: 0 0 10px rgba(0, 204, 255, 0.2);
             z-index: 100;
+            min-width: 200px;
         `;
 
-        // Mute button
+        // Music status indicator
+        const statusIndicator = document.createElement('div');
+        statusIndicator.id = 'music-status-indicator';
+        statusIndicator.style.cssText = `
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 5px;
+        `;
+        this.updateMusicStatus(statusIndicator);
+
+        // Controls row
+        const controlsRow = document.createElement('div');
+        controlsRow.style.cssText = `
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        `;
+
+        // Mute/unmute button
         const muteButton = document.createElement('button');
         muteButton.innerHTML = this.isMuted ? '🔇' : '🔊';
+        muteButton.title = this.isMuted ? 'Unmute Audio' : 'Mute Audio';
         muteButton.style.cssText = `
             background: none;
             border: 1px solid var(--border-color);
             color: var(--text-primary);
-            padding: 5px 10px;
+            padding: 6px 10px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            transition: all 0.2s ease;
         `;
 
         muteButton.addEventListener('click', () => {
             const muted = this.toggleMute();
             muteButton.innerHTML = muted ? '🔇' : '🔊';
+            muteButton.title = muted ? 'Unmute Audio' : 'Mute Audio';
+            this.updateMusicStatus(statusIndicator);
+
+            // Update music button appearance too
+            if (this.musicToggleButton) {
+                this.musicToggleButton.style.opacity = this.isBackgroundMusicPlaying ? '1' : '0.5';
+            }
         });
+
+        // Music toggle button
+        const musicButton = document.createElement('button');
+        musicButton.innerHTML = '🎵';
+        musicButton.title = 'Toggle Background Music';
+        musicButton.style.cssText = `
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        `;
+
+        musicButton.addEventListener('click', async () => {
+            if (this.isBackgroundMusicPlaying) {
+                this.pauseBackgroundMusic();
+                musicButton.style.opacity = '0.5';
+            } else {
+                const success = await this.playBackgroundMusic();
+                if (success) {
+                    musicButton.style.opacity = '1';
+                } else {
+                    // Show user they need to interact first
+                    musicButton.innerHTML = '🎵!';
+                    setTimeout(() => {
+                        musicButton.innerHTML = '🎵';
+                    }, 2000);
+                }
+            }
+            this.updateMusicStatus(statusIndicator);
+        });
+
+        // Update music button appearance based on current state
+        musicButton.style.opacity = this.isBackgroundMusicPlaying ? '1' : '0.5';
 
         // Volume slider
         const volumeSlider = document.createElement('input');
@@ -324,6 +448,7 @@ export class AudioManager {
         volumeSlider.max = '1';
         volumeSlider.step = '0.1';
         volumeSlider.value = this.volume;
+        volumeSlider.title = 'Volume';
         volumeSlider.style.cssText = `
             width: 80px;
             accent-color: var(--accent-color);
@@ -333,18 +458,174 @@ export class AudioManager {
             this.setVolume(parseFloat(e.target.value));
         });
 
-        controlsContainer.appendChild(muteButton);
-        controlsContainer.appendChild(volumeSlider);
+        // Store references for later updates
+        this.musicStatusIndicator = statusIndicator;
+        this.musicToggleButton = musicButton;
+
+        controlsRow.appendChild(muteButton);
+        controlsRow.appendChild(musicButton);
+        controlsRow.appendChild(volumeSlider);
+
+        controlsContainer.appendChild(statusIndicator);
+        controlsContainer.appendChild(controlsRow);
 
         document.body.appendChild(controlsContainer);
 
         return controlsContainer;
     }
 
+    // Update music status display
+    updateMusicStatus(statusElement) {
+        if (!statusElement) return;
+
+        let status = '';
+        if (this.isMuted) {
+            status = '🔇 Audio Muted';
+        } else if (this.isBackgroundMusicPlaying) {
+            status = '🎵 Music Playing';
+        } else {
+            const musicBlocked = localStorage.getItem('musicBlocked');
+            if (musicBlocked === 'true') {
+                status = '🎵 Click to Enable Music';
+            } else {
+                status = '🎵 Music Paused';
+            }
+        }
+
+        console.log('Updating music status:', {
+            isMuted: this.isMuted,
+            isBackgroundMusicPlaying: this.isBackgroundMusicPlaying,
+            musicBlocked: localStorage.getItem('musicBlocked'),
+            finalStatus: status
+        });
+
+        statusElement.textContent = status;
+    }
+
+    // Set up listeners for user interaction to enable audio
+    setupUserInteractionListeners() {
+        const interactionEvents = ['click', 'touchstart', 'keydown'];
+
+        const handleFirstInteraction = () => {
+            console.log('User interaction detected - enabling audio');
+
+            // Try to resume audio context if suspended
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    console.log('Audio context resumed');
+                });
+            }
+
+            // Try to start background music if it was blocked
+            const musicBlocked = localStorage.getItem('musicBlocked');
+            if (musicBlocked === 'true' && !this.isBackgroundMusicPlaying) {
+                console.log('Retrying background music after user interaction');
+                this.playBackgroundMusic().then((success) => {
+                    if (success) {
+                        // Clear the blocked flag if successful
+                        localStorage.removeItem('musicBlocked');
+                        // Update UI if music controls exist
+                        if (this.musicStatusIndicator) {
+                            this.updateMusicStatus(this.musicStatusIndicator);
+                        }
+                        if (this.musicToggleButton) {
+                            this.musicToggleButton.style.opacity = '1';
+                        }
+                    } else {
+                        // Update status even if music didn't start
+                        if (this.musicStatusIndicator) {
+                            this.updateMusicStatus(this.musicStatusIndicator);
+                        }
+                    }
+                }).catch(error => {
+                    console.log('Music still blocked after interaction:', error);
+                    // Update status on error too
+                    if (this.musicStatusIndicator) {
+                        this.updateMusicStatus(this.musicStatusIndicator);
+                    }
+                });
+            }
+
+            // Remove listeners after first interaction
+            interactionEvents.forEach(event => {
+                document.removeEventListener(event, handleFirstInteraction, true);
+            });
+        };
+
+        // Add listeners for user interaction
+        interactionEvents.forEach(event => {
+            document.addEventListener(event, handleFirstInteraction, true);
+        });
+    }
+
+    // Enhanced play method with better retry logic
+    async playBackgroundMusicWithRetry() {
+        if (!this.backgroundMusic || this.isMuted) return false;
+
+        // Check if we should attempt to play music
+        const musicBlocked = localStorage.getItem('musicBlocked');
+        if (musicBlocked === 'true') {
+            console.log('Music playback previously blocked - waiting for user interaction');
+            return false;
+        }
+
+        try {
+            const loaded = await this.ensureMusicLoaded();
+            if (!loaded) return false;
+
+            await this.backgroundMusic.play();
+            this.isBackgroundMusicPlaying = true;
+            console.log('Background music started successfully');
+
+            // Clear any previous blocked state
+            localStorage.removeItem('musicBlocked');
+            localStorage.setItem('musicEnabled', 'true');
+
+            // Update status display
+            if (this.musicStatusIndicator) {
+                this.updateMusicStatus(this.musicStatusIndicator);
+            }
+
+            return true;
+        } catch (error) {
+            if (error.name === 'NotAllowedError') {
+                console.log('Music blocked by autoplay policy - will retry on user interaction');
+                localStorage.setItem('musicBlocked', 'true');
+            } else {
+                console.warn('Failed to play background music:', error);
+            }
+
+            // Update status display even on failure
+            if (this.musicStatusIndicator) {
+                this.updateMusicStatus(this.musicStatusIndicator);
+            }
+
+            return false;
+        }
+    }
+
+    // Update the existing play method to use retry logic
+    async playBackgroundMusic() {
+        console.log('playBackgroundMusic called');
+        console.log('Current state:', {
+            hasBackgroundMusic: !!this.backgroundMusic,
+            isMuted: this.isMuted,
+            isPlaying: this.isBackgroundMusicPlaying,
+            musicSrc: this.backgroundMusic?.src,
+            readyState: this.backgroundMusic?.readyState,
+            volume: this.backgroundMusic?.volume
+        });
+        return this.playBackgroundMusicWithRetry();
+    }
+
     // Cleanup
     destroy() {
         if (this.audioContext) {
             this.audioContext.close();
+        }
+
+        if (this.statusUpdateInterval) {
+            clearInterval(this.statusUpdateInterval);
         }
 
         Object.values(this.sounds).forEach(themeSounds => {
